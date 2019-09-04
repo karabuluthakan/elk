@@ -1,0 +1,57 @@
+version: '3.7'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: langsis_postgres
+    ports:
+      - "5432:5432"  
+    volumes:
+      - ./database:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=
+
+  redis:
+    image: redis:latest
+    container_name: langsis_redis
+    ports:
+      - "6379:6379" 
+    environment:
+      - REDIS_PASSWORD:root
+        
+  elasticsearch:
+    image : docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
+    container_name: langsis_elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - ./elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.monitoring.enabled=true
+      - xpack.watcher.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${ELK_VERSION}
+    container_name: langsis_logstash
+    command: -f /etc/logstash/conf.d/
+    volumes:
+      - ./logstash/:/etc/logstash/conf.d/
+    ports:
+      - "5000:5000" 
+    depends_on:
+      - elasticsearch
+      
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${ELK_VERSION}
+    container_name: langsis_kibana 
+    volumes:
+      - ./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
